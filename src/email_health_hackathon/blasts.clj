@@ -9,11 +9,11 @@
 (defn send-health [num-recipients]
   (logistic (- num-recipients 10)))
 
+; 
 (defn count-blast-emails [content]
   (/ (reduce 
     (fn [counter email]
       (let [num-recipients (count-sent-to email)]
-        #_(if (< 10 num-recipients) (inc counter) counter)
         (+ counter (send-health num-recipients))))
     0.0
     content) (count content)))

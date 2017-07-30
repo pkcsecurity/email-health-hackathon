@@ -147,3 +147,13 @@ exit
 (butlast [1 2 3])
 (rest [1 2 3])
 (c)
+exit
+(-main)
+(defn a [] (use 'email-health-hackathon.core :reload-all))
+(defn c [] (a) (-main))
+(c)
+(hashmap #{"a" "b" "c"}
+)
+(into {} #{1 2 3})
+(reduce (fn [acc x] (assoc acc x [])) {} #{1 2 3})
+(c)

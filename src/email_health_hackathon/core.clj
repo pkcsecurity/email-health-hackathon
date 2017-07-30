@@ -2,10 +2,12 @@
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [clojure.string :as s]
+            [email-health-hackathon.utils :as utils]
             [email-health-hackathon.chains :as chains]
             [email-health-hackathon.blasts :as blasts]
             [email-health-hackathon.sends :as sends]
-            [email-health-hackathon.immediate :as immediate])
+            [email-health-hackathon.immediate :as immediate]
+            [email-health-hackathon.distraction :as distraction])
   (:gen-class))
 
 (defn starting-email? [{subject :message_subject}]
@@ -42,15 +44,27 @@
     starting-emails
     content))
 
-; given an email map, return a vector of emails
-(defn parse-tos-and-froms [{:keys [sender_address recipient_status]}]
-  (conj 
-    (mapv first (mapv #(s/split % #"##") (s/split recipient_status #";"))) 
-    sender_address))
+(defn ingest-csv [filename]
+  (println (str "---" filename "---"))
+  (with-open [reader (io/reader (str "logs/" filename))]
+    (let [content (doall (csv/read-csv reader))
+          first-row (mapv keyword (first content))
+          data (rest content)
+          structured-content (mapv #(zipmap first-row %) data)
+          starting-emails (find-starting-emails structured-content)
+          chains (parse-chains starting-emails structured-content)
+          unique-emails-count (count (utils/determine-unique-emails structured-content))]
+      (println (str "Chain Health: " (chains/chain-health chains)))
+      (println (str "Blast Health: " (blasts/count-blast-emails structured-content)))
+      (println (str "Send Health: " (sends/calculate-average-sends structured-content unique-emails-count)))
+      (println (str "Immediacy Health: " (immediate/proportion-immediate chains)))
+      (println (str "Distraction Health: " (distraction/distracted-score structured-content))))))
 
-(defn determine-unique-emails [content domains-set]
-  (let [all-emails (into #{} (flatten (mapv parse-tos-and-froms content)))]
-    (filter #(contains? domains-set (last (s/split % #"@"))) all-emails)))
+(def filenames 
+  ["MTSummary_Tenant Message trace report May 15 to May 22_8eba2a87-9a2a-43ce-abbe-a882d512035c.csv"
+   "MTSummary_Tenant Message trace report May 22 to May 29_4dea17cf-6e9b-4d8b-90fe-df61f07300fc.csv"
+   "MTSummary_Tenant Message trace report May 29 to June 5_b0898d18-6436-48c5-9523-0c18caa75430.csv"
+   "MTSummary_Tenant Message trace report June 5 to June 15_9af49a18-461a-4be9-8402-cafb95611498.csv"])
 
 ; TODO: we are assuming that all emails with the same original subject (taking out RE's) are part of a chain
 ; we could improve this by checking timestamps / making sure the recipients are consistent
@@ -59,16 +73,4 @@
 ; we toss out the highlighters by calculating median.
 (defn -main
   [& args]
-  (let [filename "MTSummary_Tenant Message trace report June 5 to June 15_9af49a18-461a-4be9-8402-cafb95611498.csv"]
-    (with-open [reader (io/reader (str "logs/" filename))]
-      (let [content (doall (csv/read-csv reader))
-            first-row (mapv keyword (first content))
-            data (rest content)
-            structured-content (mapv #(zipmap first-row %) data)
-            starting-emails (find-starting-emails structured-content)
-            chains (parse-chains starting-emails structured-content)
-            unique-emails-count (count (determine-unique-emails structured-content #{"msnpath.com"}))]
-        (println (str "Chain Health: " (chains/chain-health chains)))
-        (println (str "Blast Health: " (blasts/count-blast-emails structured-content)))
-        (println (str "Send Health: " (sends/calculate-average-sends structured-content unique-emails-count)))
-        (println (str "Immediacy Health: " (immediate/proportion-immediate chains)))))))
+  (map ingest-csv filenames))
