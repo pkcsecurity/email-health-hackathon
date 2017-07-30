@@ -2,5 +2,5 @@
   (:require [clojure.string :as s])
   (:gen-class))
 
-(defn calculate-average-sends [content unique-emails-count]
-  (float (/ (count content) unique-emails-count)))
+(defn calculate-average-sends [content unique-emails-count days]
+  (float (/ (/ (count content) unique-emails-count) days)))

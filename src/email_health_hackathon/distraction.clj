@@ -29,7 +29,7 @@
 
 ; average email-writing chunks per person, over a time period (10 days)
 ; lower is better
-(defn distracted-score [content]
+(defn distracted-score [content days]
   (let [unique-emails (set->hashmap (utils/determine-unique-emails content))
         senders (construct-sender-data-structure unique-emails content)] 
     (let [chunks
@@ -42,4 +42,4 @@
                   1))
              0
              (vals senders))]
-    (float (/ chunks (count (filter not-empty (vals senders))))))))
+    (float (/ (/ chunks (count (filter not-empty (vals senders)))) days)))))
