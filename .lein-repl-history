@@ -28,3 +28,48 @@ exit
 exit
 (defn a [] (use 'email-health-hackathon.core :reload-all))
 (defn c [] (a) (-main))
+(= false 0)
+(= false nil)
+(false? nil)
+(true? nil)
+(nil? nil)
+(not-nil? nil)
+(c)
+(update {} :a inc)
+(update {:a 1} :a inc)
+(c)
+(when true 1)
+(when true (let [x (+ 1 2)] (when true 1)))
+(when true (let [x (+ 1 2)] (when true 2)))
+(when true (let [x (+ 1 2)] (when true )))
+(when true (let [x (+ 1 2)] (when true x)))
+(c)
+(defn a [] (use 'email-health-hackathon.core :reload-all))
+(defn c [] (a) (-main))
+(c)
+exit
+(-main)
+(first {:a {:a 1 :b 2}})
+(first {:a {:a 1 :b 2} :b 2})
+(-main)
+(defn a [] (use 'email-health-hackathon.core :reload-all))
+(defn c [] (a) (-main))
+(c)
+(defn median [coll]
+  (let [sorted (sort coll)
+        cnt (count sorted)
+        halfway (quot cnt 2)]
+    (if (odd? cnt)
+      (nth sorted halfway) ; (1)
+      (let [bottom (dec halfway)
+            bottom-val (nth sorted bottom)
+            top-val (nth sorted halfway)]
+        (mean [bottom-val top-val]))))) ; (2)
+(c)
+exit
+exit 
+exit
+(defn a [] (use 'email-health-hackathon.core :reload-all))
+(defn c [] (a) (-main))
+(c)
+exit
