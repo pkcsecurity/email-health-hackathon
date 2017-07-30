@@ -2,7 +2,10 @@
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [clojure.string :as s]
-            [email-health-hackathon.stats :as stats])
+            [email-health-hackathon.chains :as chains]
+            [email-health-hackathon.blasts :as blasts]
+            [email-health-hackathon.sends :as sends]
+            [email-health-hackathon.immediate :as immediate])
   (:gen-class))
 
 (defn starting-email? [{subject :message_subject}]
@@ -39,25 +42,15 @@
     starting-emails
     content))
 
-(def penultimate
-  (comp second reverse))
+; given an email map, return a vector of emails
+(defn parse-tos-and-froms [{:keys [sender_address recipient_status]}]
+  (conj 
+    (mapv first (mapv #(s/split % #"##") (s/split recipient_status #";"))) 
+    sender_address))
 
-; we removed all chains of length 1, and high outliers (likely not one chain) 
-(defn chain-health [chains]
-  (let [chain-counts (mapv #(count (second %)) (seq chains))
-        sorted-chains-without-ones (sort (filterv #(not= 1 %) chain-counts))
-        sorted-chains-without-ones-and-outlier (butlast sorted-chains-without-ones)
-        largest-chain (penultimate (sort-by #(count (second %)) (seq chains)))
-        histogram (reduce
-                    (fn [acc chain]
-                      (let [length (count (second chain))]
-                        (if (contains? acc length)
-                          (update acc length inc)
-                          (assoc acc length 1))))
-                    {}
-                    (seq chains))
-        sorted-histogram (sort-by second (seq histogram))]
-    (float (stats/mean sorted-chains-without-ones-and-outlier))))
+(defn determine-unique-emails [content domains-set]
+  (let [all-emails (into #{} (flatten (mapv parse-tos-and-froms content)))]
+    (filter #(contains? domains-set (last (s/split % #"@"))) all-emails)))
 
 ; TODO: we are assuming that all emails with the same original subject (taking out RE's) are part of a chain
 ; we could improve this by checking timestamps / making sure the recipients are consistent
@@ -73,5 +66,9 @@
             data (rest content)
             structured-content (mapv #(zipmap first-row %) data)
             starting-emails (find-starting-emails structured-content)
-            chains (parse-chains starting-emails structured-content)]
-        (println (str "Chain Health: " (chain-health chains)))))))
+            chains (parse-chains starting-emails structured-content)
+            unique-emails-count (count (determine-unique-emails structured-content #{"msnpath.com"}))]
+        (println (str "Chain Health: " (chains/chain-health chains)))
+        (println (str "Blast Health: " (blasts/count-blast-emails structured-content)))
+        (println (str "Send Health: " (sends/calculate-average-sends structured-content unique-emails-count)))
+        (println (str "Immediacy Health: " (immediate/proportion-immediate chains)))))))
